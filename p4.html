@@ -1,0 +1,15 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Comprobación</title>
+<style>body{font:16px/1.5 system-ui;padding:16px;background:#fff;color:#111}.ok{color:#15803d}.ko{color:#b91c1c;font-weight:700}code{background:#eee;padding:1px 4px;border-radius:4px}</style></head><body>
+<h2>Comprobación de archivos</h2><p>Compara el tamaño que recibe tu móvil con el que debería tener.</p><div id="out">Cargando…</div>
+<script>
+var EXP={"p0.html": {"chars": 92368}, "p1.html": {"chars": 118940}, "p2.html": {"chars": 120149}, "p3.html": {"chars": 123587}};
+var out=document.getElementById('out');out.innerHTML='';
+Object.keys(EXP).concat(['index.html']).forEach(function(f){
+  var row=document.createElement('p');out.appendChild(row);row.textContent=f+': …';
+  fetch(f+'?x='+Date.now(),{cache:'no-store'}).then(function(r){return r.text().then(function(t){
+    var e=EXP[f];var ends=/<\/html>\s*$/.test(t);
+    var ok=e?(t.length===e.chars):null;
+    row.innerHTML='<b>'+f+'</b>: recibe '+t.length+' caracteres'+(e?' (debería: '+e.chars+')':'')+' · termina en &lt;/html&gt;: '+(ends?'sí':'<span class="ko">NO</span>')+' · '+(e?(ok?'<span class="ok">CORRECTO</span>':'<span class="ko">DISTINTO</span>'):'(sin referencia)')+'<br><code>…'+t.slice(-40).replace(/</g,'&lt;')+'</code>';
+  })}).catch(function(err){row.innerHTML='<b>'+f+'</b>: <span class="ko">no se pudo leer</span>';});
+});
+</script></body></html>
