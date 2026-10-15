@@ -1,7 +1,7 @@
 /* Service worker: la app funciona sin internet.
    Con conexión: pide siempre la versión más reciente (sin usar la copia temporal del navegador) y la guarda.
    Sin conexión: usa la copia guardada. Si cambias archivos, sube el número de versión. */
-const CACHE = 'kcal-v11';
+const CACHE = 'kcal-v12';
 const ASSETS = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
