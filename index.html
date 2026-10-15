@@ -15,7 +15,7 @@
 <title>Calorías y macros</title>
 <script>
 /* Diagnóstico: si algo falla al arrancar, se muestra el error en pantalla en lugar de dejarla en blanco */
-(function(){var V='v15';function show(m){try{var d=document.getElementById('diag');if(!d){d=document.createElement('div');d.id='diag';
+(function(){var V='v16';function show(m){try{var d=document.getElementById('diag');if(!d){d=document.createElement('div');d.id='diag';
 d.style.cssText='position:fixed;left:8px;right:8px;bottom:8px;z-index:9999;background:#7f1d1d;color:#fff;padding:12px;border-radius:12px;font:13px/1.4 system-ui;white-space:pre-wrap;word-break:break-word';
 (document.body||document.documentElement).appendChild(d);}d.textContent=(d.textContent||'Error en la app ('+V+'). Hazme una captura de este mensaje:')+'\n• '+m;}catch(e){}}
 window.__diag=show;
@@ -73,6 +73,11 @@ b{font-weight:650}
 #welcome input,#welcome select{width:100%}
 #topbar button.inst{font-size:13px;font-weight:600;padding:0 12px;background:var(--accent);color:var(--accent-ink);border-radius:12px;margin-left:auto;margin-right:8px}
 #topbar button.inst[hidden]{display:none}
+.setgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 12px 12px}
+.settile{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-height:110px;padding:14px;border-radius:16px;border:1px solid var(--line);background:var(--card);color:var(--text);text-align:left;font:inherit;cursor:pointer}
+.settile .ic{font-size:30px;line-height:1}
+.settile b{font-size:15px}
+.settile .sub{font-size:12px;color:var(--muted)}
 .steps{margin:6px 0 8px 20px;padding:0;line-height:1.7}
 .btn{min-height:48px;border-radius:12px;border:1px solid var(--line);background:var(--card2);
   color:var(--text);font:inherit;font-weight:600;padding:0 16px;cursor:pointer}
