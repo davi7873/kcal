@@ -10,10 +10,12 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-title" content="Kcal">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Calorías y macros</title>
 <script>
 /* Diagnóstico: si algo falla al arrancar, se muestra el error en pantalla en lugar de dejarla en blanco */
-(function(){var V='v14';function show(m){try{var d=document.getElementById('diag');if(!d){d=document.createElement('div');d.id='diag';
+(function(){var V='v15';function show(m){try{var d=document.getElementById('diag');if(!d){d=document.createElement('div');d.id='diag';
 d.style.cssText='position:fixed;left:8px;right:8px;bottom:8px;z-index:9999;background:#7f1d1d;color:#fff;padding:12px;border-radius:12px;font:13px/1.4 system-ui;white-space:pre-wrap;word-break:break-word';
 (document.body||document.documentElement).appendChild(d);}d.textContent=(d.textContent||'Error en la app ('+V+'). Hazme una captura de este mensaje:')+'\n• '+m;}catch(e){}}
 window.__diag=show;
@@ -69,6 +71,9 @@ b{font-weight:650}
 #welcome{position:fixed;inset:0;z-index:100;background:var(--bg);overflow:auto;padding:max(20px,env(safe-area-inset-top)) 16px 40px}
 #welcome .in{max-width:520px;margin:0 auto}
 #welcome input,#welcome select{width:100%}
+#topbar button.inst{font-size:13px;font-weight:600;padding:0 12px;background:var(--accent);color:var(--accent-ink);border-radius:12px;margin-left:auto;margin-right:8px}
+#topbar button.inst[hidden]{display:none}
+.steps{margin:6px 0 8px 20px;padding:0;line-height:1.7}
 .btn{min-height:48px;border-radius:12px;border:1px solid var(--line);background:var(--card2);
   color:var(--text);font:inherit;font-weight:600;padding:0 16px;cursor:pointer}
 .btn:active{filter:brightness(.9)}
@@ -208,7 +213,7 @@ details[open] summary:after{content:"▴"}
 </head>
 <body>
 <div id="app">
-  <header id="topbar"><h1 id="title">Diario</h1><button id="themeBtn" aria-label="Cambiar tema">◐</button></header>
+  <header id="topbar"><h1 id="title">Diario</h1><button id="installBtn" class="inst" hidden>⬇ Instalar app</button><button id="themeBtn" aria-label="Cambiar tema">◐</button></header>
   <main id="view"></main>
 </div>
 <nav id="tabs"><div class="in" id="tabsIn"></div></nav>
