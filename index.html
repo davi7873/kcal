@@ -15,7 +15,7 @@
 <title>Calorías y macros</title>
 <script>
 /* Diagnóstico: si algo falla al arrancar, se muestra el error en pantalla en lugar de dejarla en blanco */
-(function(){var V='v11';function show(m){try{var d=document.getElementById('diag');if(!d){d=document.createElement('div');d.id='diag';
+(function(){var V='v12';function show(m){try{var d=document.getElementById('diag');if(!d){d=document.createElement('div');d.id='diag';
 d.style.cssText='position:fixed;left:8px;right:8px;bottom:8px;z-index:9999;background:#7f1d1d;color:#fff;padding:12px;border-radius:12px;font:13px/1.4 system-ui;white-space:pre-wrap;word-break:break-word';
 (document.body||document.documentElement).appendChild(d);}d.textContent=(d.textContent||'Error en la app ('+V+'). Hazme una captura de este mensaje:')+'\n• '+m;}catch(e){}}
 window.addEventListener('error',function(e){show((e.message||'error')+' @ línea '+(e.lineno||'?')+':'+(e.colno||'?')+(e.error&&e.error.stack?' | '+String(e.error.stack).split('\n').slice(0,3).join(' / '):''));});
