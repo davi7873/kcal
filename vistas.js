@@ -355,4 +355,34 @@ function welcomeScreen() {
     state.onboarded = true; state.created = today(); save(); el.remove(); render();
   };
 }
+/* ---------- Instalación (Android / iPhone) ---------- */
+let installEvt = null;
+const isStandalone = () => (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+function updateInstallBtn() { $('#installBtn').hidden = isStandalone(); }
+try {
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; });
+  window.addEventListener('appinstalled', () => { installEvt = null; $('#installBtn').hidden = true; toast('App instalada'); });
+} catch (e) {}
+function sheetInstall() {
+  const ios = isIOS();
+  const b = openSheet(`<h3>Instalar app</h3>
+    <span class="sub">Se añade a tu pantalla de inicio como una app y funciona sin internet.</span>
+    <div class="row2" style="margin-top:10px"><button class="btn ${!ios ? 'primary' : ''}" id="i-and">🤖 Android</button><button class="btn ${ios ? 'primary' : ''}" id="i-ios">🍎 iPhone</button></div>
+    <div id="i-body" style="margin-top:12px"></div><button class="btn block" id="i-close">Cerrar</button>`);
+  const body = $('#i-body', b);
+  const showAnd = () => {
+    body.innerHTML = installEvt
+      ? `<button class="btn primary block" id="i-go">Instalar ahora</button><span class="sub">Android te pedirá confirmar una vez.</span>`
+      : `<p><b>En Chrome:</b></p><ol class="steps"><li>Toca los <b>tres puntitos ⋮</b> arriba a la derecha.</li><li>Elige <b>Instalar app</b> (o <b>Añadir a pantalla de inicio</b>).</li><li>Confirma.</li></ol>
+         <span class="sub">Si ya la instalaste o abres esto desde otro navegador, puede que no aparezca el botón automático.</span>`;
+    const go = $('#i-go', body);
+    if (go) go.onclick = async () => { const ev = installEvt; installEvt = null; try { await ev.prompt(); await ev.userChoice; } catch (e) {} closeSheet(); };
+  };
+  const showIos = () => { body.innerHTML = `<p><b>En Safari:</b></p><ol class="steps"><li>Toca el botón <b>Compartir</b> (cuadrado con flecha ⬆︎, abajo o arriba).</li><li>Baja y elige <b>Añadir a pantalla de inicio</b>.</li><li>Toca <b>Añadir</b>.</li></ol>
+    <span class="sub">Apple no permite instalar con un solo botón: hay que hacerlo desde el menú Compartir. Debe ser Safari (o Chrome/Edge con iOS reciente).</span>`; };
+  $('#i-and', b).onclick = showAnd; $('#i-ios', b).onclick = showIos; $('#i-close', b).onclick = closeSheet;
+  (ios ? showIos : showAnd)();
+}
+try { $('#installBtn').onclick = sheetInstall; } catch (e) {}
 window.__p = (window.__p || 0) + 1;   // marca: este archivo se cargó entero
