@@ -10,8 +10,6 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<meta name="apple-mobile-web-app-title" content="Kcal">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Calorías y macros</title>
 <script>
 /* Aplica el tema guardado antes de pintar para evitar el parpadeo */
@@ -58,11 +56,6 @@ b{font-weight:650}
 /* ===== Tarjetas, botones, campos ===== */
 .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:0 12px 12px}
 .card h2{margin:0 0 8px;font-size:16px}
-#topbar button.inst{font-size:13px;font-weight:600;padding:0 12px;background:var(--accent);color:var(--accent-ink);border-radius:12px;margin-left:auto;margin-right:8px}
-#topbar button.inst[hidden]{display:none}
-#welcome{position:fixed;inset:0;z-index:100;background:var(--bg);overflow:auto;padding:max(20px,env(safe-area-inset-top)) 16px 40px}
-#welcome .in{max-width:520px;margin:0 auto}
-#welcome input,#welcome select{width:100%}
 .btn{min-height:48px;border-radius:12px;border:1px solid var(--line);background:var(--card2);
   color:var(--text);font:inherit;font-weight:600;padding:0 16px;cursor:pointer}
 .btn:active{filter:brightness(.9)}
@@ -76,7 +69,6 @@ input,select,textarea{width:100%;min-height:48px;background:var(--card2);color:v
   border:1px solid var(--line);border-radius:12px;padding:0 12px;font:inherit}
 textarea{padding:10px 12px;min-height:160px;font-size:14px;line-height:1.5}
 input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:0}
-.steps{margin:6px 0 8px 20px;padding:0;line-height:1.7}
 .lbl{display:block;margin:12px 0 4px;font-size:13px;color:var(--muted)}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
@@ -203,7 +195,7 @@ details[open] summary:after{content:"▴"}
 </head>
 <body>
 <div id="app">
-  <header id="topbar"><h1 id="title">Diario</h1><button id="installBtn" class="inst" hidden>⬇ Instalar app</button><button id="themeBtn" aria-label="Cambiar tema">◐</button></header>
+  <header id="topbar"><h1 id="title">Diario</h1><button id="themeBtn" aria-label="Cambiar tema">◐</button></header>
   <main id="view"></main>
 </div>
 <nav id="tabs"><div class="in" id="tabsIn"></div></nav>
@@ -457,7 +449,6 @@ const MOLINO = [
 function defaults() {
   return {
     v: 2,
-    onboarded: false,   // false = usuario nuevo: se muestra la pantalla de bienvenida
     profile: {
       sex: 'M', age: 36, height: 180, weight: 83.5,   // valores iniciales; los cambios posteriores van en profileLog
       birth: '',               // fecha de nacimiento (AAAA-MM-DD); si está, la edad se calcula sola
@@ -470,13 +461,13 @@ function defaults() {
     },
     // Historial del perfil: cada entrada vale desde su fecha ('from') hasta la siguiente
     profileLog: [{ from: '0000-00-00', sex: 'M', age: 36, height: 180, activity: 1.35 }],
-    foods: [],        // vacía para usuarios nuevos (usan el catálogo base, el escáner u Open Food Facts)
+    foods: clone(SEED_FOODS),
     meals: [],        // comidas guardadas: {id, name, items:[{foodId, grams}]}
     // Día: {train, alcohol, entries:{…}, session:{routineId, strengthMin, met, cardioMin, cardioSpeed, kg:{rowId:'texto'}},
     //       activities:[{id, name, min, met, kcalManual, speed}]}
     days: {},
     weights: [],      // [{date, kg}]
-    routines: [],
+    routines: clone(SEED_ROUTINES),
     lastGrams: {},    // última cantidad usada por alimento
     recent: [],       // ids de alimentos usados recientemente
     theme: 'auto',
@@ -521,7 +512,6 @@ function normalize(s) {
     out.profileLog = [{ from: '0000-00-00', sex: out.profile.sex, age: out.profile.age, height: out.profile.height, activity: out.profile.activity }];
   out.profileLog = out.profileLog.slice().sort((a, b) => a.from.localeCompare(b.from));
   if (!out.created) out.created = today();
-  out.onboarded = s.onboarded !== undefined ? !!s.onboarded : true;   // datos ya existentes = no es usuario nuevo
   return out;
 }
 function load() {
@@ -1458,4 +1448,13 @@ function calcNote() {
   const kg = weightAt(today()), q = profileAt(today()), bmr = bmrFor(kg, today()), rest = bmr * q.activity;
   return `Con ${fmt(kg, 1)} kg: metabolismo basal <b>${fmt(bmr)} kcal</b> · día sin entreno <b>${fmt(rest)} kcal</b>. El entrenamiento y la actividad extra se suman encima.`;
 }
-const DOW_LETTERS = [[1, 'L'], [2, 'M'], [3, 'X'
+const DOW_LETTERS = [[1, 'L'], [2, 'M'], [3, 'X'], [4, 'J'], [5, 'V'], [6, 'S'], [0, 'D']];
+function viewSettings() {
+  const p = state.profile, tg = p.targets, q = profileAt(today());
+  return `<section class="card"><h2>Perfil</h2>
+    <p class="note" style="margin-top:0">Los cambios de peso, altura, edad, sexo o factor de actividad se aplican <b>desde hoy en adelante</b>: los días anteriores no se recalculan.</p>
+    <label class="fld"><span>Sexo</span><select data-set="plog.sex"><option value="M" ${q.sex === 'M' ? 'selected' : ''}>Hombre</option><option value="F" ${q.sex === 'F' ? 'selected' : ''}>Mujer</option></select><em></em></label>
+    <label class="fld"><span>Fecha de nacimiento</span><input type="date" data-set="profile.birth" value="${esc(p.birth || '')}" max="${today()}" style="width:160px"><em></em></label>
+    ${/^\d{4}-\d{2}-\d{2}$/.test(p.birth || '')
+      ? `<p class="note">Edad calculada: <b>${ageAt(today())} años</b>. Se actualiza sola cada cumpleaños.</p>`
+     
