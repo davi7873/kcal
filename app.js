@@ -241,10 +241,10 @@ document.addEventListener('toggle', ev => { const k = ev.target.dataset && ev.ta
 function updateSwState() {
   const el = $('#swState'); if (!el) return;
   const online = navigator.onLine ? 'con conexión' : 'sin conexión';
-  if (!('serviceWorker' in navigator)) { el.textContent = `Versión v14 · Estado: ${online}. Este navegador no admite modo offline.`; return; }
+  if (!('serviceWorker' in navigator)) { el.textContent = `Versión v15 · Estado: ${online}. Este navegador no admite modo offline.`; return; }
   navigator.serviceWorker.getRegistration().then(r => {
-    el.textContent = `Versión v14 · Estado: ${online}. Modo offline: ${r && r.active ? 'activo ✓' : 'se activará tras la primera carga'}.`;
-  }).catch(() => { el.textContent = `Versión v14 · Estado: ${online}.`; });
+    el.textContent = `Versión v15 · Estado: ${online}. Modo offline: ${r && r.active ? 'activo ✓' : 'se activará tras la primera carga'}.`;
+  }).catch(() => { el.textContent = `Versión v15 · Estado: ${online}.`; });
 }
 window.addEventListener('online', updateSwState); window.addEventListener('offline', updateSwState);
 if ('serviceWorker' in navigator) {
@@ -256,5 +256,6 @@ try { if (navigator.storage && navigator.storage.persist) navigator.storage.pers
 applyTheme();
 render();
 /* Lo opcional va al final y protegido: si algo de aquí falla, la app ya está pintada y funciona igual */
+try { updateInstallBtn(); } catch (e) { try { $('#installBtn').hidden = true; } catch (e2) {} }
 try { welcomeScreen(); } catch (e) { try { state.onboarded = true; save(); } catch (e2) {} }
 window.__p = (window.__p || 0) + 1;   // marca: este archivo se cargó entero
