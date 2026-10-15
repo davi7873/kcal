@@ -273,9 +273,16 @@ function calcNote() {
   return `Con ${fmt(kg, 1)} kg: metabolismo basal <b>${fmt(bmr)} kcal</b> · día sin entreno <b>${fmt(rest)} kcal</b>. El entrenamiento y la actividad extra se suman encima.`;
 }
 const DOW_LETTERS = [[1, 'L'], [2, 'M'], [3, 'X'], [4, 'J'], [5, 'V'], [6, 'S'], [0, 'D']];
-function viewSettings() {
-  const p = state.profile, tg = p.targets, q = profileAt(today());
-  return `<section class="card"><h2>Perfil</h2>
+/* Ajustes: un menú de iconos; cada icono abre su sección (ui.setSec) */
+const SET_SECS = [
+  ['perfil', '👤', 'Perfil', 'Sexo, edad, altura, peso, actividad'],
+  ['rutinas', '🏋️', 'Rutinas', 'Entrenamientos y ejercicios'],
+  ['objetivos', '🎯', 'Objetivos', 'Macros diarios y caña'],
+  ['tema', '🎨', 'Apariencia', 'Tema claro u oscuro'],
+  ['copia', '💾', 'Copia de seguridad', 'Compartir, importar o borrar']
+];
+const SET_HTML = {
+  perfil: () => { const p = state.profile, tg = p.targets, q = profileAt(today()); return `<section class="card"><h2>Perfil</h2>
     <p class="note" style="margin-top:0">Los cambios de peso, altura, edad, sexo o factor de actividad se aplican <b>desde hoy en adelante</b>: los días anteriores no se recalculan.</p>
     <label class="fld"><span>Sexo</span><select data-set="plog.sex"><option value="M" ${q.sex === 'M' ? 'selected' : ''}>Hombre</option><option value="F" ${q.sex === 'F' ? 'selected' : ''}>Mujer</option></select><em></em></label>
     <label class="fld"><span>Fecha de nacimiento</span><input type="date" data-set="profile.birth" value="${esc(p.birth || '')}" max="${today()}" style="width:160px"><em></em></label>
@@ -287,32 +294,40 @@ function viewSettings() {
     ${fld('Factor de actividad', 'plog.activity', q.activity, { min: 1 })}
     ${fld('Déficit diario (negativo = ganar)', 'profile.deficitGoal', p.deficitGoal, { suf: 'kcal', min: -1000 })}
     ${fld('Avisar si el déficit supera', 'profile.alarm', p.alarm, { suf: 'kcal', min: 0 })}
-    <p class="note" id="calcNote">${calcNote()}</p></section>
-    <section class="card"><h2>Rutinas de entrenamiento</h2>
+    <p class="note" id="calcNote">${calcNote()}</p></section>`; },
+  rutinas: () => { const p = state.profile, tg = p.targets, q = profileAt(today()); return `<section class="card"><h2>Rutinas de entrenamiento</h2>
     <p class="note" style="margin-top:0">Se eligen al activar “Hoy entreno”. Cada rutina propone sus ejercicios, minutos, intensidad y cinta.</p>
     ${state.routines.map(r => `<button class="entry" data-a="editRoutine" data-id="${esc(r.id)}"><span class="grow"><b>${esc(r.name)}</b>
       <span class="sub">${fmt(r.strengthMin)} min de fuerza${r.cardioMin > 0 ? ` + ${fmt(r.cardioMin)} min a ${plain(r.cardioSpeed)} km/h` : ''} · ${(r.dows || []).length ? DOW_LETTERS.filter(([i]) => r.dows.includes(i)).map(x => x[1]).join(' ') : 'sin día fijo'}</span></span><span class="sub">✎</span></button>`).join('')}
-    <button class="btn block" data-a="newRoutine">＋ Nueva rutina</button></section>
-    <section class="card"><h2>Objetivos diarios</h2>
+    <button class="btn block" data-a="newRoutine">＋ Nueva rutina</button></section>`; },
+  objetivos: () => { const p = state.profile, tg = p.targets, q = profileAt(today()); return `<section class="card"><h2>Objetivos diarios</h2>
     ${fld('Proteína', 'profile.targets.p', tg.p, { suf: 'g', min: 0 })}${fld('Grasa', 'profile.targets.f', tg.f, { suf: 'g', min: 0 })}
     ${fld('Carbohidratos', 'profile.targets.c', tg.c, { suf: 'g', min: 0 })}${fld('Fibra', 'profile.targets.fiber', tg.fiber, { suf: 'g', min: 0 })}
-    ${fld('Caña de 200 ml', 'profile.beerKcal', p.beerKcal, { suf: 'kcal', min: 0 })}</section>
-    <section class="card"><h2>Apariencia</h2><label class="fld"><span>Tema</span><select data-set="theme">
-      ${[['auto', 'Automático'], ['dark', 'Oscuro'], ['light', 'Claro']].map(([v, l]) => `<option value="${v}" ${state.theme === v ? 'selected' : ''}>${l}</option>`).join('')}</select><em></em></label></section>
-    <section class="card"><h2>Copia de seguridad</h2>
+    ${fld('Caña de 200 ml', 'profile.beerKcal', p.beerKcal, { suf: 'kcal', min: 0 })}</section>`; },
+  tema: () => { const p = state.profile, tg = p.targets, q = profileAt(today()); return `<section class="card"><h2>Apariencia</h2><label class="fld"><span>Tema</span><select data-set="theme">
+      ${[['auto', 'Automático'], ['dark', 'Oscuro'], ['light', 'Claro']].map(([v, l]) => `<option value="${v}" ${state.theme === v ? 'selected' : ''}>${l}</option>`).join('')}</select><em></em></label></section>`; },
+  copia: () => { const p = state.profile, tg = p.targets, q = profileAt(today()); return `<section class="card"><h2>Copia de seguridad</h2>
     <p class="note" style="margin-top:0">Tus datos viven solo en este móvil. Última copia: <b>${state.lastExport ? state.lastExport.split('-').reverse().join('/') : 'nunca'}</b>.</p>
     <button class="btn primary block" data-a="shareBackup">Compartir copia (Drive, WhatsApp…)</button>
     <button class="btn block" data-a="export">Descargar copia (JSON)</button>
     <button class="btn block" data-a="import">Importar copia</button>
     <button class="btn danger block" data-a="reset">Borrar todos los datos</button>
-    <p class="note" id="swState"></p></section>`;
+    <p class="note" id="swState"></p></section>`; }
+};
+function settingsTitle() { const s = SET_SECS.find(x => x[0] === ui.setSec); return s ? s[2] : TITLES.settings; }
+function viewSettings() {
+  if (!SET_HTML[ui.setSec]) {
+    return `<div class="setgrid">${SET_SECS.map(([id, ic, name, sub]) => `<button class="settile" data-a="setSec" data-s="${id}"><span class="ic">${ic}</span><b>${name}</b><span class="sub">${sub}</span></button>`).join('')}</div>
+      <p class="note" id="swState" style="margin:10px 16px"></p>`;
+  }
+  return `<div style="margin:0 12px 10px"><button class="btn sm" data-a="setSec" data-s="">← Ajustes</button></div>` + SET_HTML[ui.setSec]();
 }
 
 const VIEWS = { diary: viewDiary, foods: viewFoods, meals: viewMeals, week: viewWeek, weight: viewWeight, settings: viewSettings };
 let lastTab = null;
 function render() {
   const y = window.scrollY;
-  $('#title').textContent = TITLES[ui.tab];
+  $('#title').textContent = ui.tab === 'settings' ? settingsTitle() : TITLES[ui.tab];
   $('#view').innerHTML = VIEWS[ui.tab]();
   $('#tabsIn').innerHTML = TABS.map(([id, ic, lb]) => `<button class="${ui.tab === id ? 'on' : ''}" data-a="tab" data-t="${id}"><span>${ic}</span>${lb}</button>`).join('');
   window.scrollTo(0, lastTab === ui.tab ? y : 0);
