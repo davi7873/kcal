@@ -14,15 +14,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Calorías y macros</title>
 <script>
-/* Diagnóstico: si algo falla al arrancar, se muestra el error en pantalla en lugar de dejarla en blanco */
-(function(){var V='v10';function show(m){try{var d=document.getElementById('diag');if(!d){d=document.createElement('div');d.id='diag';
-d.style.cssText='position:fixed;left:8px;right:8px;bottom:8px;z-index:9999;background:#7f1d1d;color:#fff;padding:12px;border-radius:12px;font:13px/1.4 system-ui;white-space:pre-wrap;word-break:break-word';
-(document.body||document.documentElement).appendChild(d);}d.textContent=(d.textContent||'Error en la app ('+V+'). Hazme una captura de este mensaje:')+'\n• '+m;}catch(e){}}
-window.addEventListener('error',function(e){show((e.message||'error')+' @ línea '+(e.lineno||'?')+':'+(e.colno||'?')+(e.error&&e.error.stack?' | '+String(e.error.stack).split('\n').slice(0,3).join(' / '):''));});
-window.addEventListener('unhandledrejection',function(e){show('promesa: '+(e.reason&&e.reason.message||e.reason));});
-window.addEventListener('load',function(){setTimeout(function(){var v=document.getElementById('view');if((!v||!v.innerHTML.trim())&&!document.getElementById('diag'))show('La pantalla no se ha pintado (sin error de JS).');},1500);});})();
-</script>
-<script>
 /* Aplica el tema guardado antes de pintar para evitar el parpadeo */
 try{var s=JSON.parse(localStorage.getItem('kcal-macros-v1')||'{}');var t=s.theme||'auto';
 if(t==='auto')t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';
@@ -1220,7 +1211,7 @@ function summaryHTML(key) {
     </div>
     <div class="bal ${bi.cls}">${esc(bi.txt)}${key === today() && bi.intake > 0 ? '<span class="sub" style="color:inherit;opacity:.8;font-weight:400">Provisional: el día no ha terminado</span>' : ''}</div>
     <div class="preview" style="text-align:left">🎯 <b>Objetivo de hoy: ${fmt(goal)} kcal</b>
-      <span class="sub" style="display:inline">(${state.profile.deficitGoal < 0 ? `gasto ${fmt(ex.total)} + superávit ${fmt(-state.profile.deficitGoal)}` : `gasto ${fmt(ex.total)} − déficit ${fmt(state.profile.deficitGoal)}`})</span><br>
+      <span class="sub" style="display:inline">(gasto ${fmt(ex.total)} − déficit ${fmt(state.profile.deficitGoal)})</span><br>
       ${rem >= 0 ? `Te quedan <b>${fmt(rem)} kcal</b>` : `Te has pasado <b style="color:var(--warn)">${fmt(-rem)} kcal</b>`} ·
       ${remP > 0 ? `faltan <b>${fmt(remP)} g</b> de proteína` : 'proteína cumplida ✓'}</div>
     <details style="margin-top:6px" ${ui.calcOpen ? 'open' : ''} data-keep="calcOpen"><summary>Cómo se calcula el gasto</summary>
@@ -1452,4 +1443,19 @@ function viewWeight() {
     <input type="date" id="wDate" value="${today()}"><input id="wKg" inputmode="decimal" placeholder="kg, ej. 83,5"></div>
     <button class="btn primary block" data-a="wsave">Guardar peso</button></section>
     <section class="card"><div class="chips" style="margin-top:0">${[[30, '30 días'], [90, '90 días'], [365, '1 año'], [0, 'Todo']].map(([v, l]) =>
-      `<button class="chip ${ui.wRange === v ? 'on' : ''}" data-a="wrange" data-v="${v}">${l}</button>`).join('')}</div
+      `<button class="chip ${ui.wRange === v ? 'on' : ''}" data-a="wrange" data-v="${v}">${l}</button>`).join('')}</div>
+    ${weightChartSVG(pts)}${stats}</section>
+    <section class="card"><h2>Historial</h2>${all.length ? all.slice().reverse().slice(0, 60).map(w => `<button class="entry" data-a="wdel" data-d="${w.date}">
+      <span class="grow"><b>${w.date.split('-').reverse().join('/')}</b></span><span class="kc">${fmt(w.kg, 1)} kg</span><span class="sub" style="width:24px">✕</span></button>`).join('') : '<p class="empty">Sin registros todavía.</p>'}
+    ${all.length ? '<p class="note">Toca un registro para borrarlo. El gasto de cada día usa el último peso registrado hasta esa fecha.</p>' : ''}</section>${gymProgressHTML()}`;
+}
+
+function fld(label, path, val, o = {}) {
+  return `<label class="fld"><span>${label}</span><input ${o.text ? '' : 'data-num="1"'} ${o.min != null ? `data-min="${o.min}"` : ''}
+    inputmode="${o.text ? 'text' : 'decimal'}" data-set="${path}" value="${esc(o.text ? val : plain(val))}">${o.suf ? `<em>${o.suf}</em>` : '<em></em>'}</label>`;
+}
+function calcNote() {
+  const kg = weightAt(today()), q = profileAt(today()), bmr = bmrFor(kg, today()), rest = bmr * q.activity;
+  return `Con ${fmt(kg, 1)} kg: metabolismo basal <b>${fmt(bmr)} kcal</b> · día sin entreno <b>${fmt(rest)} kcal</b>. El entrenamiento y la actividad extra se suman encima.`;
+}
+const DOW_LETTERS = [[1, 'L'], [2, 'M'], [3, 'X'
