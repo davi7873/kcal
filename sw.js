@@ -1,8 +1,8 @@
 /* Service worker: guarda la app en caché para que funcione sin internet.
    Estrategia: responde desde caché al instante y actualiza en segundo plano.
    Si cambias index.html, sube el número de versión para forzar la actualización. */
-const CACHE = 'kcal-v13';
-const ASSETS = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png'];
+const CACHE = 'kcal-v14';
+const ASSETS = ['./', 'index.html', 'datos.js', 'hojas.js', 'vistas.js', 'app.js', 'manifest.json', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
