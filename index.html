@@ -135,6 +135,10 @@ details summary::-webkit-details-marker{display:none}
 details summary:after{content:"▾";margin-left:auto;color:var(--muted)}
 details[open] summary:after{content:"▴"}
 .steps{margin:6px 0 0;padding-left:20px;font-size:14px;color:var(--muted)}
+.exrow2{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line);font-size:15px}
+.kgbox{display:flex;align-items:center;gap:4px;flex:none}
+.kgbox input{width:84px;text-align:right}
+.kgbox em{font-style:normal;color:var(--muted);font-size:13px}
 
 /* ===== Semana ===== */
 .stat{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -262,30 +266,38 @@ const SEED_FOODS = [
     'Leche semidesnatada + 1 sobre de azúcar. Ajusta a tu caso.')
 ];
 
-/* Rutina del documento "Rutina de entrenamiento". Clave = día de la semana JS (0 dom … 6 sáb). */
-const SEED_ROUTINE = {
-  1: { title: 'Día 1 · Espalda, bíceps, prensa y full body', rows: [
+/* Rutinas del documento "Rutina de entrenamiento". Cada rutina lleva su duración de fuerza, intensidad (MET),
+   cardio en cinta y los días de la semana en que se propone (0 dom … 6 sáb). Los minutos son una suposición editable. */
+const mkRoutine = (id, name, dows, strengthMin, cardioMin, rows) => ({
+  id, name, dows, strengthMin, met: 5, cardioMin, cardioSpeed: 8,
+  rows: rows.map((r, i) => ({ id: `${id}-${i}`, block: r[0], name: r[1], sets: r[2], plan: r[3] }))
+});
+const SEED_ROUTINES = [
+  mkRoutine('rut-1', 'Día 1 · Espalda, bíceps, prensa y full body', [1], 40, 20, [
     ['Superserie 1', 'Dorsales', '3x10', '40 kg + máquina'],
     ['Superserie 1', 'Bíceps paralelo al cuerpo', '3x10', '12,5 kg cada mano'],
     ['Superserie 2', 'Espalda posterior (cuerda hacia la cara en multipower)', '3x10', '60 kg'],
     ['Superserie 2', 'Prensa', '3x10', '180 kg + máquina'],
-    ['Full body', 'Molino de pared', '3x10 (10 pases por mano)', '5 kg'],
-    ['Cardio', 'Cinta andando a velocidad 8', '20 min', '—']] },
-  2: { title: 'Día 2 · Pecho, tríceps, zancada y full body', rows: [
+    ['Full body', 'Molino de pared', '3x10 (10 pases por mano)', '5 kg']]),
+  mkRoutine('rut-2', 'Día 2 · Pecho, tríceps, zancada y full body', [2], 40, 20, [
     ['Superserie 1', 'Pecho plano', '3x10', '25 kg cada mano'],
     ['Superserie 1', 'Tríceps paralelo al cuerpo', '3x10', '50 kg'],
     ['Superserie 2', 'Pecho apertura', '3x10', '55 kg en máquina o 15 kg cada mano en banco'],
     ['Superserie 2', 'Zancada', '3x10', '20 kg cada mano'],
-    ['Full body', 'Molino de pared', '3x10 (10 pases por mano)', '5 kg'],
-    ['Cardio', 'Cinta andando a velocidad 8', '20 min', '—']] },
-  4: { title: 'Día 3 · Hombro, abdomen, sentadilla y peso muerto', rows: [
+    ['Full body', 'Molino de pared', '3x10 (10 pases por mano)', '5 kg']]),
+  mkRoutine('rut-3', 'Día 3 · Hombro, abdomen, sentadilla y peso muerto', [4], 60, 0, [
     ['Superserie 1', 'Hombro frontal (press militar)', '3x10', '17,5 kg cada mano'],
     ['Superserie 1', 'Abdominales (elevación de piernas rectas en máquina)', '3x10', 'Libre'],
     ['Superserie 2', 'Hombro lateral', '3x10', '40 kg en máquina o 10 kg cada mano con mancuerna'],
     ['Superserie 2', 'Oblicuos', '3x10', 'Libre, solo movimiento'],
     ['Pierna', 'Sentadilla', '3x10', 'Barra de 20 kg + 25 kg por lado (70 kg)'],
-    ['Pierna', 'Peso muerto', '3x10', 'Barra de 20 kg + 35 kg por lado (90 kg)']] }
-};
+    ['Pierna', 'Peso muerto', '3x10', 'Barra de 20 kg + 35 kg por lado (90 kg)']])
+];
+/* Intensidad de la sesión de fuerza (MET aproximado) */
+const INTENSITY = [['Suave', 3.5], ['Moderada', 5], ['Intensa', 6], ['Circuito intenso', 8]];
+/* Deportes frecuentes (MET aproximado, Compendium of Physical Activities) */
+const SPORTS = [['Fútbol', 7], ['Pádel', 6], ['Tenis', 7.3], ['Baloncesto', 6.5], ['Ciclismo moderado', 8],
+                ['Natación', 6], ['Senderismo', 6], ['Bailar', 5], ['Yoga', 2.5]];
 const MOLINO = [
   'Apoya la espalda en la pared y baja a posición de sentadilla, sin silla, con la espalda recta.',
   'Abre los brazos en cruz y sujeta una pesa de 5 kg en una mano.',
@@ -296,21 +308,25 @@ const MOLINO = [
 
 function defaults() {
   return {
-    v: 1,
+    v: 2,
     profile: {
-      sex: 'M', age: 36, height: 180, weight: 83.5,
+      sex: 'M', age: 36, height: 180, weight: 83.5,   // valores iniciales; los cambios posteriores van en profileLog
+      birth: '',               // fecha de nacimiento (AAAA-MM-DD); si está, la edad se calcula sola
       activity: 1.35,          // factor de actividad diario (trabajo sentado + ~4,2 km andando)
       alarm: 700,              // déficit a partir del cual se avisa en rojo
       beerKcal: 95,            // kcal por caña de 200 ml
-      // kcal extra de gimnasio por día de la semana (0 = domingo … 6 = sábado)
-      gym: { 0: 350, 1: 350, 2: 350, 3: 350, 4: 250, 5: 350, 6: 350 },
+      gym: { 0: 350, 1: 350, 2: 350, 3: 350, 4: 250, 5: 350, 6: 350 },   // solo para datos antiguos sin sesión
       targets: { p: 150, f: 65, c: 190, fiber: 30 }   // objetivos diarios en gramos
     },
+    // Historial del perfil: cada entrada vale desde su fecha ('from') hasta la siguiente
+    profileLog: [{ from: '0000-00-00', sex: 'M', age: 36, height: 180, activity: 1.35 }],
     foods: clone(SEED_FOODS),
     meals: [],        // comidas guardadas: {id, name, items:[{foodId, grams}]}
-    days: {},         // 'YYYY-MM-DD' → {train, alcohol, entries:{desayuno:[{id,foodId,grams,snap}],…}}
+    // Día: {train, alcohol, entries:{…}, session:{routineId, strengthMin, met, cardioMin, cardioSpeed, kg:{rowId:'texto'}},
+    //       activities:[{id, name, min, met, kcalManual, speed}]}
+    days: {},
     weights: [],      // [{date, kg}]
-    routine: clone(SEED_ROUTINE),
+    routines: clone(SEED_ROUTINES),
     lastGrams: {},    // última cantidad usada por alimento
     recent: [],       // ids de alimentos usados recientemente
     theme: 'auto'
@@ -318,6 +334,14 @@ function defaults() {
 }
 
 /* ---------- 3. Estado, persistencia y cálculos ---------- */
+/* Convierte el formato antiguo de rutinas (una por día de la semana) al nuevo */
+function migrateRoutines(old) {
+  return Object.keys(old).map(k => {
+    const o = old[k], rows = o.rows || [], cardio = rows.find(x => x[0] === 'Cardio'), id = 'rut-' + k;
+    return { id, name: o.title || 'Rutina', dows: [+k], strengthMin: 45, met: 5, cardioMin: cardio ? num(cardio[2]) : 0, cardioSpeed: 8,
+      rows: rows.filter(x => x[0] !== 'Cardio').map((r, i) => ({ id: `${id}-${i}`, block: r[0] || '', name: r[1] || '', sets: r[2] || '', plan: r[3] || '' })) };
+  });
+}
 function normalize(s) {
   const d = defaults(), sp = s.profile || {};
   const out = Object.assign({}, d, s);
@@ -325,12 +349,24 @@ function normalize(s) {
   out.profile.gym = Object.assign({}, d.profile.gym, sp.gym || {});
   out.profile.targets = Object.assign({}, d.profile.targets, sp.targets || {});
   ['foods', 'meals', 'weights', 'recent'].forEach(k => { if (!Array.isArray(out[k])) out[k] = d[k]; });
-  ['days', 'lastGrams', 'routine'].forEach(k => { if (!out[k] || typeof out[k] !== 'object') out[k] = d[k]; });
+  ['days', 'lastGrams'].forEach(k => { if (!out[k] || typeof out[k] !== 'object') out[k] = d[k]; });
   out.foods = out.foods.filter(f => f && f.id && f.name).map(f => ({
     id: String(f.id), name: String(f.name), kcal: num(f.kcal), p: num(f.p), f: num(f.f), c: num(f.c), fiber: num(f.fiber),
     approx: !!f.approx, note: f.note || '',
     unit: f.unit && f.unit.name && num(f.unit.g) > 0 ? { name: String(f.unit.name), g: num(f.unit.g) } : null
   }));
+  // Rutinas: si vienen del formato antiguo se migran; si no hay ninguna, las de serie
+  if (!Array.isArray(s.routines)) out.routines = s.routine && typeof s.routine === 'object' ? migrateRoutines(s.routine) : clone(SEED_ROUTINES);
+  delete out.routine;
+  out.routines = out.routines.filter(r => r && r.id && Array.isArray(r.rows)).map(r => ({
+    id: String(r.id), name: String(r.name || 'Rutina'), dows: Array.isArray(r.dows) ? r.dows.map(Number) : [],
+    strengthMin: num(r.strengthMin), met: num(r.met) || 5, cardioMin: num(r.cardioMin), cardioSpeed: num(r.cardioSpeed) || 5,
+    rows: r.rows.map((x, i) => ({ id: String(x.id || `${r.id}-${i}`), block: x.block || '', name: x.name || '', sets: x.sets || '', plan: x.plan || '' }))
+  }));
+  // Historial del perfil con fecha (para que un cambio no altere los días anteriores)
+  if (!Array.isArray(s.profileLog) || !s.profileLog.length)
+    out.profileLog = [{ from: '0000-00-00', sex: out.profile.sex, age: out.profile.age, height: out.profile.height, activity: out.profile.activity }];
+  out.profileLog = out.profileLog.slice().sort((a, b) => a.from.localeCompare(b.from));
   return out;
 }
 function load() {
@@ -387,17 +423,87 @@ function weightAt(key) {
   state.weights.forEach(w => { if (w.date <= key && (!best || w.date > best.date)) best = w; });
   return best ? best.kg : state.profile.weight;
 }
-/* Metabolismo basal con Mifflin-St Jeor */
-function bmrFor(kg) {
-  const p = state.profile;
-  return 10 * kg + 6.25 * p.height - 5 * p.age + (p.sex === 'F' ? -161 : 5);
+/* Perfil vigente en una fecha (sexo, edad, altura, factor de actividad).
+   Cada cambio se guarda con su fecha y solo afecta de ese día en adelante. */
+function profileAt(key) {
+  let best = state.profileLog[0];
+  state.profileLog.forEach(e => { if (e.from <= key) best = e; });
+  return best;
 }
-/* Gasto del día = BMR × factor de actividad + gimnasio (si "hoy entreno") */
+function setProfileField(field, value) {
+  const t = today();
+  let e = state.profileLog.find(x => x.from === t);
+  if (!e) {
+    e = Object.assign({}, profileAt(t), { from: t });
+    state.profileLog.push(e);
+    state.profileLog.sort((a, b) => a.from.localeCompare(b.from));
+  }
+  e[field] = value;
+}
+/* Metabolismo basal con Mifflin-St Jeor, con el perfil vigente ese día */
+function bmrFor(kg, key) {
+  const k = key || today(), q = profileAt(k);
+  return 10 * kg + 6.25 * q.height - 5 * ageAt(k) + (q.sex === 'F' ? -161 : 5);
+}
+/* Edad en una fecha: años cumplidos según la fecha de nacimiento (si no hay, la edad escrita a mano) */
+function ageAt(key) {
+  const b = state.profile.birth;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(b || '')) return profileAt(key).age;
+  const [by, bm, bd] = b.split('-').map(Number), [y, m, d] = key.split('-').map(Number);
+  return Math.max(0, y - by - ((m < bm || (m === bm && d < bd)) ? 1 : 0));
+}
+/* MET de caminar/correr según velocidad (km/h), interpolado de la tabla del Compendium of Physical Activities (aprox.) */
+const WALK_MET = [[0, 2.0], [3.2, 2.8], [4.0, 3.0], [4.8, 3.5], [5.6, 4.3], [6.4, 5.0], [7.2, 7.0], [8.0, 8.3],
+                  [9.7, 9.8], [11.3, 11.0], [12.9, 11.8], [14.5, 12.8]];
+function metWalk(v) {
+  const t = WALK_MET;
+  if (v <= t[0][0]) return t[0][1];
+  for (let i = 1; i < t.length; i++) {
+    if (v <= t[i][0]) { const [x0, y0] = t[i - 1], [x1, y1] = t[i]; return y0 + (y1 - y0) * (v - x0) / (x1 - x0); }
+  }
+  return t[t.length - 1][1];
+}
+/* kcal NETAS = (MET − 1) × kg × horas. Se resta 1 MET porque el reposo ya está dentro de basal × actividad. */
+const netKcal = (met, kg, min) => Math.max(0, met - 1) * kg * min / 60;
+const routineById = id => state.routines.find(r => r.id === id) || null;
+const routineFor = key => { const dow = parseKey(key).getDay(); return state.routines.find(r => (r.dows || []).includes(dow)) || null; };
+const sessionFromRoutine = r => r
+  ? { routineId: r.id, strengthMin: r.strengthMin, met: r.met, cardioMin: r.cardioMin, cardioSpeed: r.cardioSpeed, kg: {} }
+  : { routineId: null, strengthMin: 0, met: 5, cardioMin: 0, cardioSpeed: 5, kg: {} };
+/* Sesión del día: se crea al activar "Hoy entreno" con la rutina propuesta para ese día de la semana */
+function ensureSession(key) {
+  const d = ensureDay(key);
+  if (!d.session) { d.session = sessionFromRoutine(routineFor(key)); save(); }
+  if (!d.session.kg) d.session.kg = {};
+  return d.session;
+}
+/* Últimos kilos anotados para un ejercicio de una rutina, antes de la fecha dada */
+function priorSessions(routineId, key) {
+  return Object.keys(state.days).filter(k => k < key && state.days[k].session && state.days[k].session.routineId === routineId).sort().reverse();
+}
+function lastKg(routineId, rowId, key) {
+  for (const k of priorSessions(routineId, key)) { const v = (state.days[k].session.kg || {})[rowId]; if (v) return v; }
+  return '';
+}
+/* Gasto del entrenamiento (fuerza + cinta). Si había "hoy entreno" sin sesión (datos antiguos), se usa el valor fijo de antes. */
+function trainParts(key) {
+  const d = state.days[key], z = { strength: 0, cardio: 0, total: 0, legacy: false };
+  if (!d || !d.train) return z;
+  if (!d.session) { const g = num(state.profile.gym[parseKey(key).getDay()]); return { strength: g, cardio: 0, total: g, legacy: true }; }
+  const kg = weightAt(key), s = d.session;
+  const strength = netKcal(num(s.met) || 5, kg, num(s.strengthMin)), cardio = netKcal(metWalk(num(s.cardioSpeed)), kg, num(s.cardioMin));
+  return { strength, cardio, total: strength + cardio, legacy: false };
+}
+const activityKcal = (a, key) => num(a.kcalManual) > 0 ? num(a.kcalManual) : netKcal(num(a.met), weightAt(key), num(a.min));
+function extraKcal(key) {
+  const d = state.days[key];
+  return d && d.activities ? d.activities.reduce((s, a) => s + activityKcal(a, key), 0) : 0;
+}
+/* Gasto del día = basal × factor de actividad + entrenamiento + actividad extra (todo con el peso y perfil de ESE día) */
 function expenseOf(key) {
-  const p = state.profile, d = state.days[key];
-  const bmr = bmrFor(weightAt(key)), base = bmr * p.activity;
-  const gym = d && d.train ? num(p.gym[parseKey(key).getDay()]) : 0;
-  return { bmr, base, gym, total: base + gym };
+  const q = profileAt(key), bmr = bmrFor(weightAt(key), key), base = bmr * q.activity;
+  const train = trainParts(key), extra = extraKcal(key);
+  return { bmr, base, activity: q.activity, train, extra, total: base + train.total + extra };
 }
 /* Balance = ingesta − gasto. Negativo = déficit. */
 function balanceInfo(key) {
@@ -516,7 +622,8 @@ function sheetPicker({ title, onPick, onBack }) {
     <input type="search" id="pq" placeholder="Buscar alimento…" autocomplete="off">
     <div id="plist" class="list"></div>
     <div class="row2"><button class="btn" id="pnew">＋ Nuevo alimento</button>
-    <button class="btn" id="pback">${onBack ? 'Volver' : 'Cerrar'}</button></div>`);
+    <button class="btn" id="ponline">🌐 Buscar online</button></div>
+    <button class="btn block" id="pback">${onBack ? 'Volver' : 'Cerrar'}</button>`);
   const q = $('#pq', b), list = $('#plist', b);
   const rank = id => { const i = state.recent.indexOf(id); return i < 0 ? 999 : i; };
   const draw = () => {
@@ -537,13 +644,15 @@ function sheetPicker({ title, onPick, onBack }) {
                confirmLabel: 'Añadir', onOk: g => onPick(food, g), onBack: again });
   });
   $('#pnew', b).onclick = () => openFoodForm(null, again);
+  $('#ponline', b).onclick = () => sheetOnline({ onBack: again, onDone: food =>
+    sheetQty({ food, grams: food.unit ? food.unit.g : 100, confirmLabel: 'Añadir', onOk: g => onPick(food, g), onBack: again }) });
   $('#pback', b).onclick = () => onBack ? onBack() : closeSheet();
 }
 
 /* Formulario de alimento (alta / edición / borrado) */
-function openFoodForm(food, onSaved) {
-  const isNew = !food;
-  const f = food || { name: '', kcal: '', p: '', f: '', c: '', fiber: '', approx: false, note: '', unit: null };
+function openFoodForm(food, onSaved, prefill) {
+  const isNew = !food;   // con "prefill" se crea un alimento nuevo con esos datos ya rellenos
+  const f = food || prefill || { name: '', kcal: '', p: '', f: '', c: '', fiber: '', approx: false, note: '', unit: null };
   const v = x => esc(x === '' ? '' : plain(x));
   const b = openSheet(`<h3>${isNew ? 'Nuevo alimento' : 'Editar alimento'}</h3>
     <span class="sub">Todos los valores por 100 g</span>
@@ -587,6 +696,175 @@ function openFoodForm(food, onSaved) {
       state.recent = state.recent.filter(i => i !== food.id);
       save(); closeSheet(); render(); toast('Alimento eliminado');
     }, () => openFoodForm(food, onSaved));
+}
+
+/* ---- Búsqueda online en Open Food Facts (base abierta; requiere conexión) ----
+   Los resultados se revisan en el formulario antes de guardarse; una vez guardados
+   el alimento vive en tu base local y funciona sin internet. */
+const onlineState = { q: '', results: null, msg: '' };
+function offToFood(p) {
+  const n = p.nutriments || {};
+  let kcal = n['energy-kcal_100g'];
+  if (kcal == null && n['energy_100g'] != null) kcal = n['energy_100g'] / 4.184;   // kJ → kcal
+  const name = (p.product_name_es || p.product_name || '').trim();
+  if (!name || kcal == null || !isFinite(+kcal)) return null;
+  const brand = (p.brands || '').split(',')[0].trim();
+  const missing = ['proteins_100g', 'fat_100g', 'carbohydrates_100g', 'fiber_100g']
+    .filter(k => n[k] == null || !isFinite(+n[k]));
+  const r1 = x => Math.round(num(x) * 10) / 10, sq = num(p.serving_quantity);
+  return {
+    name: brand && !norm(name).includes(norm(brand)) ? `${name} (${brand})` : name,
+    kcal: Math.round(+kcal), p: r1(n.proteins_100g), f: r1(n.fat_100g), c: r1(n.carbohydrates_100g), fiber: r1(n.fiber_100g),
+    approx: missing.length > 0,
+    note: 'Fuente: Open Food Facts' + (p.code ? ` (${p.code})` : '') + (missing.length ? '. Faltan datos en su ficha: revisa la etiqueta.' : ''),
+    unit: sq > 0 && sq < 1000 ? { name: 'porción', g: sq } : null
+  };
+}
+async function searchOFF(q) {
+  const url = 'https://world.openfoodfacts.org/cgi/search.pl?search_simple=1&action=process&json=1&page_size=30'
+    + '&fields=code,product_name,product_name_es,brands,nutriments,serving_quantity&search_terms=' + encodeURIComponent(q);
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 15000);
+  try {
+    const r = await fetch(url, { signal: ctl.signal });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    return (j.products || []).map(offToFood).filter(Boolean);
+  } finally { clearTimeout(timer); }
+}
+function sheetOnline({ onDone, onBack }) {
+  const b = openSheet(`<h3>Buscar online</h3>
+    <span class="sub">Open Food Facts · productos de supermercado. Revisa los datos antes de guardar.</span>
+    <div class="grid2" style="grid-template-columns:1fr auto;margin-top:10px">
+      <input type="search" id="oq" placeholder="Ej.: arroz basmati hacendado" value="${esc(onlineState.q)}" autocomplete="off">
+      <button class="btn primary" id="ogo">Buscar</button></div>
+    <div id="olist" class="list" style="max-height:50vh"></div>
+    <button class="btn block" id="oback">${onBack ? 'Volver' : 'Cerrar'}</button>`);
+  const list = $('#olist', b), q = $('#oq', b);
+  const draw = () => {
+    if (onlineState.msg) { list.innerHTML = `<p class="empty">${esc(onlineState.msg)}</p>`; return; }
+    const res = onlineState.results;
+    if (!res) { list.innerHTML = ''; return; }
+    list.innerHTML = res.length ? res.map((f, i) => `<button class="item" data-i="${i}"><span class="grow"><b>${esc(f.name)}</b>
+      <span class="sub">${fmt(f.kcal)} kcal · P ${fmt(f.p, 1)} · G ${fmt(f.f, 1)} · C ${fmt(f.c, 1)} /100 g</span></span>
+      ${f.approx ? '<span class="badge">incompleto</span>' : ''}</button>`).join('')
+      : '<p class="empty">Sin resultados. Prueba con otras palabras (por ejemplo, la marca).</p>';
+  };
+  const go = async () => {
+    const t = q.value.trim();
+    if (t.length < 2) return toast('Escribe al menos 2 letras');
+    onlineState.q = t; onlineState.msg = '';
+    if (!navigator.onLine) { onlineState.results = null; onlineState.msg = 'Sin conexión. Inténtalo cuando tengas internet.'; draw(); return; }
+    list.innerHTML = '<p class="empty">Buscando…</p>';
+    try { onlineState.results = await searchOFF(t); }
+    catch (e) { onlineState.results = null; onlineState.msg = 'No se pudo conectar con Open Food Facts. Inténtalo de nuevo en unos segundos.'; }
+    if (list.isConnected) draw();
+  };
+  $('#ogo', b).onclick = go;
+  q.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+  list.addEventListener('click', ev => {
+    const it = ev.target.closest('.item'); if (!it) return;
+    const pre = onlineState.results[+it.dataset.i];
+    openFoodForm(null, saved => saved ? onDone(saved) : sheetOnline({ onDone, onBack }), pre);
+  });
+  $('#oback', b).onclick = () => onBack ? onBack() : closeSheet();
+  draw();
+}
+
+/* Editor de rutinas: nombre, minutos, intensidad, cinta, días propuestos y ejercicios.
+   Los kilos ya anotados siguen unidos a cada ejercicio mientras no cambies su bloque y nombre. */
+function openRoutineEditor(id) {
+  const isNew = !id;
+  const r = isNew ? { id: null, name: '', dows: [], strengthMin: 45, met: 5, cardioMin: 0, cardioSpeed: 5, rows: [] } : routineById(id);
+  if (!r) return;
+  const dows = new Set(r.dows || []);
+  const b = openSheet(`<h3>${isNew ? 'Nueva rutina' : 'Editar rutina'}</h3>
+    <label class="lbl">Nombre</label><input id="rn" value="${esc(r.name)}" placeholder="Ej.: Día 4 · Pierna" autocomplete="off">
+    <div class="grid2">
+      <div><label class="lbl">Fuerza (min)</label><input id="rs" inputmode="decimal" value="${plain(r.strengthMin)}"></div>
+      <div><label class="lbl">Intensidad</label><select id="rm">${INTENSITY.map(([n, m]) => `<option value="${m}" ${m === r.met ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
+      <div><label class="lbl">Cinta / andar (min)</label><input id="rc" inputmode="decimal" value="${plain(r.cardioMin)}"></div>
+      <div><label class="lbl">Velocidad (km/h)</label><input id="rv" inputmode="decimal" value="${plain(r.cardioSpeed)}"></div></div>
+    <label class="lbl">Se propone estos días al activar “Hoy entreno”</label>
+    <div class="chips" id="rd">${DOW_LETTERS.map(([i, l]) => `<button class="chip ${dows.has(i) ? 'on' : ''}" data-d="${i}">${l}</button>`).join('')}</div>
+    <label class="lbl">Ejercicios · una línea cada uno: Bloque | Ejercicio | Series x reps | Plan de peso</label>
+    <textarea id="rr" spellcheck="false" style="min-height:240px">${esc(r.rows.map(x => [x.block, x.name, x.sets, x.plan].join(' | ')).join('\n'))}</textarea>
+    <button class="btn primary block" id="rok">Guardar</button>
+    <div class="row2"><button class="btn" id="cl">Cancelar</button>${isNew ? '<span></span>' : '<button class="btn danger" id="rdel">Eliminar</button>'}</div>`);
+  $('#rd', b).addEventListener('click', ev => { const c = ev.target.closest('.chip'); if (c) c.classList.toggle('on'); });
+  $('#cl', b).onclick = closeSheet;
+  $('#rok', b).onclick = () => {
+    const name = $('#rn', b).value.trim();
+    if (!name) return toast('Escribe un nombre');
+    const oldIds = new Map(r.rows.map(x => [norm(x.block + '|' + x.name), x.id]));
+    const rows = $('#rr', b).value.split('\n').map(l => l.split('|').map(s => s.trim())).filter(c => c.some(Boolean))
+      .map(c => c.length === 1 ? ['', c[0], '', ''] : [c[0] || '', c[1] || '', c[2] || '', c[3] || ''])
+      .map(c => ({ id: oldIds.get(norm(c[0] + '|' + c[1])) || uid(), block: c[0], name: c[1], sets: c[2], plan: c[3] }));
+    const out = { id: r.id || uid(), name, rows,
+      dows: [...b.querySelectorAll('#rd .chip.on')].map(x => +x.dataset.d),
+      strengthMin: num($('#rs', b).value), met: num($('#rm', b).value) || 5,
+      cardioMin: num($('#rc', b).value), cardioSpeed: num($('#rv', b).value) || 5 };
+    const i = state.routines.findIndex(x => x.id === out.id);
+    if (i >= 0) state.routines[i] = out; else state.routines.push(out);
+    save(); closeSheet(); render(); toast('Rutina guardada');
+  };
+  if (!isNew) $('#rdel', b).onclick = () => confirmSheet(`¿Eliminar la rutina "${r.name}"? Los días ya registrados conservan sus datos.`, 'Eliminar', () => {
+    state.routines = state.routines.filter(x => x.id !== r.id); save(); closeSheet(); render(); toast('Rutina eliminada');
+  }, () => openRoutineEditor(r.id));
+}
+
+/* Actividad extra del día (fútbol, pádel, caminar…): kcal netas = (MET − 1) × peso del día × horas,
+   o las kcal de tu reloj si las indicas. */
+function sheetActivity(act) {
+  const key = ui.date, isNew = !act;
+  const a = act || { id: null, name: 'Fútbol', min: 60, met: 7, kcalManual: 0, speed: 0 };
+  let type = a.speed > 0 ? 'walk' : (SPORTS.some(s => s[0] === a.name) ? a.name : 'custom');
+  if (isNew) type = 'Fútbol';
+  const b = openSheet(`<h3>${isNew ? 'Añadir actividad' : 'Editar actividad'}</h3>
+    <span class="sub">${esc(dateLabel(key))}</span>
+    <label class="lbl">Actividad</label>
+    <select id="at">${SPORTS.map(([n, m]) => `<option value="${esc(n)}" ${type === n ? 'selected' : ''}>${esc(n)} (MET ${plain(m)})</option>`).join('')}
+      <option value="walk" ${type === 'walk' ? 'selected' : ''}>Caminar / correr (por velocidad)</option>
+      <option value="custom" ${type === 'custom' ? 'selected' : ''}>Otra (indicar nombre y MET)</option></select>
+    <div id="wWalk"><label class="lbl">Velocidad (km/h)</label><input id="asp" inputmode="decimal" value="${a.speed > 0 ? plain(a.speed) : '6'}"></div>
+    <div id="wCustom" class="grid2"><div><label class="lbl">Nombre</label><input id="an" value="${esc(type === 'custom' ? a.name : '')}"></div>
+      <div><label class="lbl">MET</label><input id="amet" inputmode="decimal" value="${plain(a.met || 5)}"></div></div>
+    <label class="lbl">Duración (min)</label><input id="am" inputmode="decimal" value="${plain(a.min)}">
+    <label class="lbl">kcal de tu reloj (opcional, sustituye al cálculo)</label>
+    <input id="ak" inputmode="decimal" value="${num(a.kcalManual) > 0 ? plain(a.kcalManual) : ''}" placeholder="vacío = calcular">
+    <div class="preview" id="ap"></div>
+    <button class="btn primary block" id="aok">Guardar</button>
+    <div class="row2"><button class="btn" id="cl">Cancelar</button>${isNew ? '<span></span>' : '<button class="btn danger" id="adel">Eliminar</button>'}</div>`);
+  const sel = $('#at', b);
+  const metNow = () => {
+    const t = sel.value;
+    if (t === 'walk') return metWalk(num($('#asp', b).value));
+    if (t === 'custom') return num($('#amet', b).value);
+    return SPORTS.find(s => s[0] === t)[1];
+  };
+  const calc = () => { const man = num($('#ak', b).value); return man > 0 ? man : netKcal(metNow(), weightAt(key), num($('#am', b).value)); };
+  const upd = () => {
+    $('#wWalk', b).style.display = sel.value === 'walk' ? '' : 'none';
+    $('#wCustom', b).style.display = sel.value === 'custom' ? '' : 'none';
+    const man = num($('#ak', b).value) > 0;
+    $('#ap', b).innerHTML = `<b>≈ ${fmt(calc())} kcal</b>${man ? ' (valor de tu reloj)' : ` · MET ${fmt(metNow(), 1)} · peso ${fmt(weightAt(key), 1)} kg`}`;
+  };
+  b.addEventListener('input', upd); b.addEventListener('change', upd); upd();
+  $('#cl', b).onclick = closeSheet;
+  $('#aok', b).onclick = () => {
+    const min = num($('#am', b).value);
+    if (!(min > 0)) return toast('Indica la duración');
+    const t = sel.value; let name = t, speed = 0;
+    if (t === 'walk') { speed = num($('#asp', b).value); if (!(speed > 0)) return toast('Indica la velocidad'); name = `Caminar/correr a ${plain(speed)} km/h`; }
+    else if (t === 'custom') { name = $('#an', b).value.trim() || 'Actividad'; if (!(metNow() > 0)) return toast('Indica el MET'); }
+    const obj = { id: a.id || uid(), name, min, met: metNow(), kcalManual: num($('#ak', b).value), speed };
+    const d = ensureDay(key); d.activities = d.activities || [];
+    const i = d.activities.findIndex(x => x.id === obj.id);
+    if (i >= 0) d.activities[i] = obj; else d.activities.push(obj);
+    save(); closeSheet(); render(); toast('Actividad guardada');
+  };
+  if (!isNew) $('#adel', b).onclick = () => {
+    const d = ensureDay(key); d.activities = d.activities.filter(x => x.id !== a.id); save(); closeSheet(); render();
+  };
 }
 
 /* Constructor de comidas guardadas */
@@ -654,32 +932,83 @@ function macroBar(label, val, target, cls, over) {
 }
 const macroLine = t => `P ${fmt(t.p)} · G ${fmt(t.f)} · C ${fmt(t.c)} · Fib ${fmt(t.fiber)}`;
 
-function viewDiary() {
-  const key = ui.date, d = state.days[key] || { train: false, alcohol: 0, entries: {} };
+function summaryHTML(key) {
   const T = dayTotals(key), ex = expenseOf(key), bi = balanceInfo(key), tg = state.profile.targets;
-  const dow = parseKey(key).getDay(), p = state.profile;
-  let h = `<div class="datenav"><button class="iconbtn" data-a="dprev" aria-label="Día anterior">‹</button>
-    <div class="datec"><div class="dlabel">${esc(dateLabel(key))}</div><input type="date" id="dateIn" value="${key}"></div>
-    <button class="iconbtn" data-a="dnext" aria-label="Día siguiente">›</button></div>`;
-  if (key !== today()) h += `<div class="center"><button class="btn sm" data-a="dtoday">Ir a hoy</button></div>`;
-
-  // Resumen del día + interruptor de entreno
-  h += `<section class="card">
-    <div class="trainrow"><div><b>Hoy entreno</b><span class="sub">${d.train ? `+${fmt(ex.gym)} kcal de gasto` : `Suma ${fmt(num(p.gym[dow]))} kcal este día`}</span></div>
-    <label class="switch"><input type="checkbox" data-a="train" ${d.train ? 'checked' : ''}><i></i></label></div>
-    <div class="nums" style="margin-top:12px">
+  return `<section class="card" id="sumCard">
+    <div class="nums">
       <div><div class="n">${fmt(T.total.kcal)}</div><div class="l">Ingesta kcal</div></div>
       <div><div class="n">${fmt(ex.total)}</div><div class="l">Gasto kcal</div></div>
       <div><div class="n">${bi.intake > 0 ? (bi.bal > 0 ? '+' : '−') + fmt(Math.abs(bi.bal)) : '—'}</div><div class="l">Balance</div></div>
     </div>
     <div class="bal ${bi.cls}">${esc(bi.txt)}${key === today() && bi.intake > 0 ? '<span class="sub" style="color:inherit;opacity:.8;font-weight:400">Provisional: el día no ha terminado</span>' : ''}</div>
     <details style="margin-top:6px" ${ui.calcOpen ? 'open' : ''} data-keep="calcOpen"><summary>Cómo se calcula el gasto</summary>
-      <div class="sub" style="font-size:14px">Metabolismo basal ${fmt(ex.bmr)} kcal (peso ${fmt(weightAt(key), 1)} kg) × actividad ${fmt(p.activity, 2)} = ${fmt(ex.base)} kcal${d.train ? `<br>+ entrenamiento ${fmt(ex.gym)} kcal` : ''}</div></details>
+      <div class="sub" style="font-size:14px">Metabolismo basal ${fmt(ex.bmr)} kcal (peso ${fmt(weightAt(key), 1)} kg) × actividad ${fmt(ex.activity, 2)} = ${fmt(ex.base)} kcal
+      ${ex.train.total > 0 ? `<br>+ entrenamiento ${fmt(ex.train.total)} kcal${ex.train.legacy ? '' : ` (fuerza ${fmt(ex.train.strength)} + cinta ${fmt(ex.train.cardio)})`}` : ''}
+      ${ex.extra > 0 ? `<br>+ actividad extra ${fmt(ex.extra)} kcal` : ''}</div></details>
     ${macroBar('Proteína', T.total.p, tg.p, 'p', false)}
     ${macroBar('Grasa', T.total.f, tg.f, 'f', true)}
     ${macroBar('Carbohidratos', T.total.c, tg.c, 'c', true)}
     ${macroBar('Fibra', T.total.fiber, tg.fiber, 'fi', false)}
   </section>`;
+}
+const trainSub = key => {
+  const d = state.days[key];
+  return d && d.train ? `+${fmt(trainParts(key).total)} kcal de gasto` : 'Actívalo para elegir rutina y calcular el gasto';
+};
+const trainKcalText = key => {
+  const tr = trainParts(key);
+  return `Fuerza <b>${fmt(tr.strength)}</b> kcal · Cinta <b>${fmt(tr.cardio)}</b> kcal<br><b>Total ${fmt(tr.total)} kcal</b>`;
+};
+/* Tarjeta "Hoy entreno": rutina elegible, minutos, intensidad, cinta y kilos de cada ejercicio */
+function trainingHTML(key) {
+  const d = state.days[key] || {}, on = !!d.train;
+  let h = `<section class="card" id="trainCard"><div class="trainrow"><div><b>🏋️ Hoy entreno</b><span class="sub" id="trainSub">${esc(trainSub(key))}</span></div>
+    <label class="switch"><input type="checkbox" data-a="train" ${on ? 'checked' : ''}><i></i></label></div>`;
+  if (on) {
+    const s = ensureSession(key), r = routineById(s.routineId);
+    h += `<label class="lbl">Rutina de este día</label><select data-ses="routineId">
+      ${state.routines.map(x => `<option value="${esc(x.id)}" ${x.id === s.routineId ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}
+      <option value="" ${r ? '' : 'selected'}>Sin rutina (solo cardio u otra cosa)</option></select>
+      <div class="grid2">
+        <div><label class="lbl">Fuerza (min)</label><input data-ses="strengthMin" inputmode="decimal" value="${plain(s.strengthMin)}"></div>
+        <div><label class="lbl">Intensidad</label><select data-ses="met">${INTENSITY.map(([n, m]) => `<option value="${m}" ${num(s.met) === m ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
+        <div><label class="lbl">Cinta / andar (min)</label><input data-ses="cardioMin" inputmode="decimal" value="${plain(s.cardioMin)}"></div>
+        <div><label class="lbl">Velocidad (km/h)</label><input data-ses="cardioSpeed" inputmode="decimal" value="${plain(s.cardioSpeed)}"></div>
+      </div>
+      <div class="preview" id="trainKcal">${trainKcalText(key)}</div>
+      <p class="note">Estimación: (MET − 1) × tu peso × tiempo. Los kilos no cambian las kcal, pero quedan guardados para seguir tu progreso.</p>`;
+    if (r) {
+      let last = '';
+      r.rows.forEach(row => {
+        if (row.block !== last) { h += `<div class="exhead">${esc(row.block)}</div>`; last = row.block; }
+        const prev = lastKg(r.id, row.id, key);
+        h += `<div class="exrow2"><div class="grow"><b>${esc(row.name)}</b><span class="sub">${esc(row.sets)}${row.plan ? ' · Plan: ' + esc(row.plan) : ''}${prev ? ' · Última vez: ' + esc(prev) + ' kg' : ''}</span></div>
+          <div class="kgbox"><input data-kg="${esc(row.id)}" inputmode="decimal" placeholder="kg" value="${esc(s.kg[row.id] || '')}"><em>kg</em></div></div>`;
+      });
+      if (r.rows.some(x => /molino/i.test(x.name))) h += `<details style="margin-top:8px"><summary style="min-height:40px;font-weight:600;font-size:14px">¿Cómo se hace el Molino de pared?</summary><ol class="steps">${MOLINO.map(x => `<li>${esc(x)}</li>`).join('')}</ol></details>`;
+      h += `<div class="row2"><button class="btn sm" data-a="copyLast">Copiar pesos de la última vez</button>
+        <button class="btn sm" data-a="editRoutine" data-id="${esc(r.id)}">Editar rutina</button></div>`;
+    }
+  }
+  return h + '</section>';
+}
+function extrasHTML(key) {
+  const list = (state.days[key] || {}).activities || [];
+  return `<section class="card" id="extraCard"><div class="bhead"><div><b>⚽ Actividad extra</b><span class="sub">Fútbol, pádel, bici, caminar…</span></div>
+    <div class="kc">${fmt(extraKcal(key))} <span class="sub" style="display:inline">kcal</span></div></div>
+    ${list.map(a => `<button class="entry" data-a="editAct" data-id="${esc(a.id)}"><span class="grow"><b>${esc(a.name)}</b>
+      <span class="sub">${fmt(a.min)} min${num(a.kcalManual) > 0 ? ' · kcal de tu reloj' : ''}</span></span><span class="kc">${fmt(activityKcal(a, key))} kcal</span></button>`).join('')}
+    <button class="btn sm block" data-a="addAct">＋ Añadir actividad</button></section>`;
+}
+
+function viewDiary() {
+  const key = ui.date, d = state.days[key] || { alcohol: 0, entries: {} }, T = dayTotals(key), p = state.profile;
+  let h = `<div class="datenav"><button class="iconbtn" data-a="dprev" aria-label="Día anterior">‹</button>
+    <div class="datec"><div class="dlabel">${esc(dateLabel(key))}</div><input type="date" id="dateIn" value="${key}"></div>
+    <button class="iconbtn" data-a="dnext" aria-label="Día siguiente">›</button></div>`;
+  if (key !== today()) h += `<div class="center"><button class="btn sm" data-a="dtoday">Ir a hoy</button></div>`;
+
+  h += summaryHTML(key) + trainingHTML(key);
 
   // Bloques de comida
   MEALS.forEach(m => {
@@ -699,19 +1028,7 @@ function viewDiary() {
     <div class="stepper"><button class="iconbtn" data-a="alc" data-d="-1" aria-label="Quitar una caña">−</button>
     <div class="val">${d.alcohol || 0}</div><button class="iconbtn" data-a="alc" data-d="1" aria-label="Añadir una caña">+</button></div></div></section>`;
 
-  // Rutina del día
-  const r = state.routine[dow];
-  if (r) {
-    let last = '';
-    h += `<section class="card"><details ${ui.routineOpen ? 'open' : ''} data-keep="routineOpen"><summary>🏋️ ${esc(r.title)}</summary>`;
-    r.rows.forEach(row => {
-      if (row[0] !== last) { h += `<div class="exhead">${esc(row[0])}</div>`; last = row[0]; }
-      h += `<div class="exrow"><span><b>${esc(row[1])}</b><span class="sub">${esc(row[2])}</span></span><span class="w">${esc(row[3])}</span></div>`;
-    });
-    if (r.rows.some(x => /molino/i.test(x[1]))) h += `<details style="margin-top:8px"><summary style="min-height:40px;font-weight:600;font-size:14px">¿Cómo se hace el Molino de pared?</summary><ol class="steps">${MOLINO.map(s => `<li>${esc(s)}</li>`).join('')}</ol></details>`;
-    h += `<button class="btn sm block" data-a="editRoutine">Editar esta rutina</button></details></section>`;
-  }
-  return h;
+  return h + extrasHTML(key);
 }
 
 function viewFoods() {
@@ -722,7 +1039,8 @@ function viewFoods() {
   return `<section class="card"><input type="search" id="foodQ" placeholder="Buscar en tu base de alimentos…" value="${esc(ui.foodQ)}" autocomplete="off">
     <div class="chips"><button class="chip ${ui.foodFilter === 'all' ? 'on' : ''}" data-a="ffilter" data-v="all">Todos (${state.foods.length})</button>
     <button class="chip ${ui.foodFilter === 'approx' ? 'on' : ''}" data-a="ffilter" data-v="approx">Por revisar (${nApprox})</button></div>
-    <button class="btn primary block" style="margin-top:0" data-a="newFood">＋ Nuevo alimento</button></section>
+    <div class="row2" style="margin-top:0"><button class="btn primary" data-a="newFood">＋ Nuevo</button>
+    <button class="btn" data-a="onlineFood">🌐 Buscar online</button></div></section>
     <section class="card" id="foodList">${foodListHTML(arr)}</section>`;
 }
 function foodListHTML(arr) {
@@ -835,21 +1153,29 @@ function fld(label, path, val, o = {}) {
     inputmode="${o.text ? 'text' : 'decimal'}" data-set="${path}" value="${esc(o.text ? val : plain(val))}">${o.suf ? `<em>${o.suf}</em>` : '<em></em>'}</label>`;
 }
 function calcNote() {
-  const p = state.profile, kg = weightAt(today()), bmr = bmrFor(kg), rest = bmr * p.activity;
-  return `Con ${fmt(kg, 1)} kg: metabolismo basal <b>${fmt(bmr)} kcal</b> · día sin entreno <b>${fmt(rest)} kcal</b> · lunes <b>${fmt(rest + num(p.gym[1]))} kcal</b>.`;
+  const kg = weightAt(today()), q = profileAt(today()), bmr = bmrFor(kg, today()), rest = bmr * q.activity;
+  return `Con ${fmt(kg, 1)} kg: metabolismo basal <b>${fmt(bmr)} kcal</b> · día sin entreno <b>${fmt(rest)} kcal</b>. El entrenamiento y la actividad extra se suman encima.`;
 }
+const DOW_LETTERS = [[1, 'L'], [2, 'M'], [3, 'X'], [4, 'J'], [5, 'V'], [6, 'S'], [0, 'D']];
 function viewSettings() {
-  const p = state.profile, tg = p.targets, order = [[1, 'Lunes'], [2, 'Martes'], [3, 'Miércoles'], [4, 'Jueves'], [5, 'Viernes'], [6, 'Sábado'], [0, 'Domingo']];
+  const p = state.profile, tg = p.targets, q = profileAt(today());
   return `<section class="card"><h2>Perfil</h2>
-    <label class="fld"><span>Sexo</span><select data-set="profile.sex"><option value="M" ${p.sex === 'M' ? 'selected' : ''}>Hombre</option><option value="F" ${p.sex === 'F' ? 'selected' : ''}>Mujer</option></select><em></em></label>
-    ${fld('Edad', 'profile.age', p.age, { suf: 'años', min: 1 })}${fld('Altura', 'profile.height', p.height, { suf: 'cm', min: 50 })}
-    ${fld('Peso base', 'profile.weight', p.weight, { suf: 'kg', min: 20 })}
-    <p class="note">Si registras pesos, se usa siempre el último. El peso base solo vale mientras no haya registros.</p>
-    ${fld('Factor de actividad', 'profile.activity', p.activity, { min: 1 })}
+    <p class="note" style="margin-top:0">Los cambios de peso, altura, edad, sexo o factor de actividad se aplican <b>desde hoy en adelante</b>: los días anteriores no se recalculan.</p>
+    <label class="fld"><span>Sexo</span><select data-set="plog.sex"><option value="M" ${q.sex === 'M' ? 'selected' : ''}>Hombre</option><option value="F" ${q.sex === 'F' ? 'selected' : ''}>Mujer</option></select><em></em></label>
+    <label class="fld"><span>Fecha de nacimiento</span><input type="date" data-set="profile.birth" value="${esc(p.birth || '')}" max="${today()}" style="width:160px"><em></em></label>
+    ${/^\d{4}-\d{2}-\d{2}$/.test(p.birth || '')
+      ? `<p class="note">Edad calculada: <b>${ageAt(today())} años</b>. Se actualiza sola cada cumpleaños.</p>`
+      : fld('Edad (o pon tu fecha de nacimiento)', 'plog.age', q.age, { suf: 'años', min: 1 })}
+    ${fld('Altura', 'plog.height', q.height, { suf: 'cm', min: 50 })}
+    ${fld('Peso actual', 'weight.today', weightAt(today()), { suf: 'kg', min: 20 })}
+    ${fld('Factor de actividad', 'plog.activity', q.activity, { min: 1 })}
     ${fld('Avisar si el déficit supera', 'profile.alarm', p.alarm, { suf: 'kcal', min: 0 })}
     <p class="note" id="calcNote">${calcNote()}</p></section>
-    <section class="card"><h2>Gasto extra de entrenamiento</h2><p class="note" style="margin-top:0">Se suma cuando activas “Hoy entreno”. El jueves no incluye cinta.</p>
-    ${order.map(([i, n]) => fld(n, 'profile.gym.' + i, p.gym[i], { suf: 'kcal', min: 0 })).join('')}</section>
+    <section class="card"><h2>Rutinas de entrenamiento</h2>
+    <p class="note" style="margin-top:0">Se eligen al activar “Hoy entreno”. Cada rutina propone sus ejercicios, minutos, intensidad y cinta.</p>
+    ${state.routines.map(r => `<button class="entry" data-a="editRoutine" data-id="${esc(r.id)}"><span class="grow"><b>${esc(r.name)}</b>
+      <span class="sub">${fmt(r.strengthMin)} min de fuerza${r.cardioMin > 0 ? ` + ${fmt(r.cardioMin)} min a ${plain(r.cardioSpeed)} km/h` : ''} · ${(r.dows || []).length ? DOW_LETTERS.filter(([i]) => r.dows.includes(i)).map(x => x[1]).join(' ') : 'sin día fijo'}</span></span><span class="sub">✎</span></button>`).join('')}
+    <button class="btn block" data-a="newRoutine">＋ Nueva rutina</button></section>
     <section class="card"><h2>Objetivos diarios</h2>
     ${fld('Proteína', 'profile.targets.p', tg.p, { suf: 'g', min: 0 })}${fld('Grasa', 'profile.targets.f', tg.f, { suf: 'g', min: 0 })}
     ${fld('Carbohidratos', 'profile.targets.c', tg.c, { suf: 'g', min: 0 })}${fld('Fibra', 'profile.targets.fiber', tg.fiber, { suf: 'g', min: 0 })}
@@ -909,21 +1235,57 @@ function importData(text) {
     'Importar copia', () => { state = normalize(data); save(); applyTheme(); closeSheet(); render(); toast('Copia importada'); }, null, false);
 }
 
-/* Cambios en campos de ajustes: se guardan sin repintar para no cerrar el teclado */
+function curValue(path) {
+  if (path[0] === 'plog') return profileAt(today())[path[1]];
+  if (path[0] === 'weight') return weightAt(today());
+  return getPath(path);
+}
+function setWeightToday(kg) {
+  const t = today(), w = state.weights.find(x => x.date === t);
+  if (w) w.kg = kg; else state.weights.push({ date: t, kg });
+}
 function setSetting(t) {
   const path = t.dataset.set.split('.');
   let v = t.value;
   if (t.dataset.num) {
     v = num(v);
     const min = t.dataset.min !== undefined ? parseFloat(t.dataset.min) : 0;
-    if (v < min || (t.value.trim() === '')) { toast('Valor no válido'); t.value = plain(getPath(path)); return; }
+    if (v < min || (t.value.trim() === '')) { toast('Valor no válido'); t.value = plain(curValue(path)); return; }
   }
-  let o = state; for (let i = 0; i < path.length - 1; i++) o = o[path[i]];
-  o[path[path.length - 1]] = v;
+  if (t.dataset.set === 'profile.birth') {                       // fecha de nacimiento: dato fijo, no necesita historial
+    if (v && (!/^\d{4}-\d{2}-\d{2}$/.test(v) || v > today() || v < '1900-01-01')) { toast('Fecha no válida'); t.value = state.profile.birth || ''; return; }
+    state.profile.birth = v; save(); render(); toast(v ? `Edad calculada: ${ageAt(today())} años` : 'Fecha borrada'); return;
+  }
+  if (path[0] === 'plog') setProfileField(path[1], v);          // perfil con fecha: solo afecta de hoy en adelante
+  else if (path[0] === 'weight') setWeightToday(v);             // peso actual = registro de peso de hoy
+  else { let o = state; for (let i = 0; i < path.length - 1; i++) o = o[path[i]]; o[path[path.length - 1]] = v; }
   save();
   if (t.dataset.set === 'theme') { applyTheme(); render(); return; }
   const n = $('#calcNote'); if (n) n.innerHTML = calcNote();
-  toast('Guardado');
+  toast(path[0] === 'plog' || path[0] === 'weight' ? 'Guardado desde hoy' : 'Guardado');
+}
+/* Cambio de un campo del entrenamiento del día: se guarda sin repintar todo (no cierra el teclado) */
+function onSessionField(t) {
+  const s = ensureSession(ui.date), f = t.dataset.ses;
+  if (f === 'routineId') {
+    const r = routineById(t.value);
+    s.routineId = r ? r.id : null;
+    if (r) { s.strengthMin = r.strengthMin; s.met = r.met; s.cardioMin = r.cardioMin; s.cardioSpeed = r.cardioSpeed; }
+    save(); render(); return;
+  }
+  if (f === 'met') s.met = num(t.value) || 5;
+  else {
+    const v = num(t.value);
+    if (t.value.trim() === '' || v < 0) { toast('Valor no válido'); t.value = plain(num(s[f])); return; }
+    s[f] = v;
+  }
+  save(); refreshTraining();
+}
+function refreshTraining() {
+  const k = ui.date;
+  const s = $('#sumCard'); if (s) s.outerHTML = summaryHTML(k);
+  const a = $('#trainKcal'); if (a) a.innerHTML = trainKcalText(k);
+  const b = $('#trainSub'); if (b) b.textContent = trainSub(k);
 }
 const getPath = p => p.reduce((o, k) => o[k], state);
 
@@ -977,23 +1339,19 @@ document.addEventListener('click', ev => {
       };
       $('#cl', b).onclick = closeSheet; break;
     }
-    case 'editRoutine': {
-      const dow = parseKey(ui.date).getDay(), r = state.routine[dow];
-      const b = openSheet(`<h3>Editar rutina</h3><span class="sub">Una línea por ejercicio: Bloque | Ejercicio | Series x reps | Peso</span>
-        <label class="lbl">Título</label><input id="rt" value="${esc(r.title)}">
-        <label class="lbl">Ejercicios</label><textarea id="rr" spellcheck="false" style="min-height:260px">${esc(r.rows.map(x => x.join(' | ')).join('\n'))}</textarea>
-        <button class="btn primary block" id="rok">Guardar</button><button class="btn block" id="cl">Cancelar</button>`);
-      $('#rok', b).onclick = () => {
-        const rows = $('#rr', b).value.split('\n').map(l => l.split('|').map(s => s.trim())).filter(c => c[0] || c[1])
-          .map(c => [c[0] || '', c[1] || '', c[2] || '', c[3] || '']);
-        if (!rows.length) return toast('Añade al menos un ejercicio');
-        state.routine[dow] = { title: $('#rt', b).value.trim() || r.title, rows };
-        save(); closeSheet(); render(); toast('Rutina guardada');
-      };
-      $('#cl', b).onclick = closeSheet; break;
+    case 'editRoutine': openRoutineEditor(id); break;
+    case 'newRoutine': openRoutineEditor(null); break;
+    case 'addAct': sheetActivity(null); break;
+    case 'editAct': sheetActivity(((state.days[ui.date] || {}).activities || []).find(x => x.id === id)); break;
+    case 'copyLast': {
+      const s = ensureSession(ui.date), r = routineById(s.routineId); if (!r) break;
+      let n = 0;
+      r.rows.forEach(row => { if (!s.kg[row.id]) { const v = lastKg(r.id, row.id, ui.date); if (v) { s.kg[row.id] = v; n++; } } });
+      save(); render(); toast(n ? `Copiados ${n} pesos de la última vez` : 'No hay pesos anteriores que copiar'); break;
     }
     case 'ffilter': ui.foodFilter = el.dataset.v; render(); break;
     case 'newFood': openFoodForm(null); break;
+    case 'onlineFood': sheetOnline({ onDone: () => closeSheet() }); break;
     case 'editFood': openFoodForm(foodById(id)); break;
     case 'newMeal': openMealBuilder(null); break;
     case 'editMeal': openMealBuilder(state.meals.find(m => m.id === id)); break;
@@ -1026,10 +1384,12 @@ document.addEventListener('click', ev => {
   }
 });
 document.addEventListener('change', ev => {
-  const t = ev.target;
-  if (t.dataset.a === 'train') { ensureDay(ui.date).train = t.checked; save(); render(); }
+  const t = ev.target, ds = t.dataset;
+  if (ds.a === 'train') { ensureDay(ui.date).train = t.checked; if (t.checked) ensureSession(ui.date); save(); render(); }
+  else if (ds.ses) onSessionField(t);
+  else if (ds.kg) { const s = ensureSession(ui.date); s.kg[ds.kg] = t.value.trim(); save(); }
   else if (t.id === 'dateIn') { if (/^\d{4}-\d{2}-\d{2}$/.test(t.value)) { ui.date = t.value; render(); } }
-  else if (t.dataset.set) setSetting(t);
+  else if (ds.set) setSetting(t);
   else if (t.id === 'fileIn') {
     const f = t.files[0]; t.value = ''; if (!f) return;
     const rd = new FileReader(); rd.onload = () => importData(String(rd.result)); rd.readAsText(f);
