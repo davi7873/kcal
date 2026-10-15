@@ -114,7 +114,8 @@ document.addEventListener('click', ev => {
   const el = ev.target.closest('[data-a]'); if (!el) return;
   const a = el.dataset.a, id = el.dataset.id, meal = el.dataset.meal;
   switch (a) {
-    case 'tab': ui.tab = el.dataset.t; render(); break;
+    case 'tab': ui.setSec = null; ui.tab = el.dataset.t; render(); break;
+    case 'setSec': ui.setSec = el.dataset.s || null; render(); window.scrollTo(0, 0); break;
     case 'dprev': ui.date = addDays(ui.date, -1); render(); break;
     case 'dnext': ui.date = addDays(ui.date, 1); render(); break;
     case 'dtoday': ui.date = today(); render(); break;
@@ -241,10 +242,10 @@ document.addEventListener('toggle', ev => { const k = ev.target.dataset && ev.ta
 function updateSwState() {
   const el = $('#swState'); if (!el) return;
   const online = navigator.onLine ? 'con conexión' : 'sin conexión';
-  if (!('serviceWorker' in navigator)) { el.textContent = `Versión v15 · Estado: ${online}. Este navegador no admite modo offline.`; return; }
+  if (!('serviceWorker' in navigator)) { el.textContent = `Versión v16 · Estado: ${online}. Este navegador no admite modo offline.`; return; }
   navigator.serviceWorker.getRegistration().then(r => {
-    el.textContent = `Versión v15 · Estado: ${online}. Modo offline: ${r && r.active ? 'activo ✓' : 'se activará tras la primera carga'}.`;
-  }).catch(() => { el.textContent = `Versión v15 · Estado: ${online}.`; });
+    el.textContent = `Versión v16 · Estado: ${online}. Modo offline: ${r && r.active ? 'activo ✓' : 'se activará tras la primera carga'}.`;
+  }).catch(() => { el.textContent = `Versión v16 · Estado: ${online}.`; });
 }
 window.addEventListener('online', updateSwState); window.addEventListener('offline', updateSwState);
 if ('serviceWorker' in navigator) {
